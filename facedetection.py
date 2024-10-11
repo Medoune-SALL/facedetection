@@ -1,6 +1,7 @@
 import cv2
 import streamlit as st
 import numpy as np
+import tempfile
 
 # Charger le classificateur en cascade pour les visages
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -35,7 +36,7 @@ def app():
 
     if uploaded_file is not None:
         # Lire l'image
-        image = np.array(bytearray(uploaded_file.read()), dtype=np.uint8)
+        image = np.frombuffer(uploaded_file.read(), np.uint8)
         image = cv2.imdecode(image, 1)
 
         # Paramètres de détection
@@ -56,15 +57,19 @@ def app():
             st.image(result_image_rgb, caption='Image avec détection de visages.', use_column_width=True)
             st.write(f"Nombre de visages détectés : {num_faces}")
 
-            # Enregistrer l'image avec les visages détectés
-            result_image_path = 'detected_faces.jpg'
-            cv2.imwrite(result_image_path, result_image)
+            # Enregistrer l'image avec les visages détectés temporairement
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:
+                cv2.imwrite(temp_file.name, result_image)
+                temp_file.seek(0)
 
-            # Télécharger l'image avec les visages détectés
-            with open(result_image_path, "rb") as file:
+                # Lire les données binaires pour le téléchargement
+                with open(temp_file.name, "rb") as file:
+                    binary_data = file.read()
+
+                # Télécharger l'image avec les visages détectés
                 st.download_button(
                     label="Télécharger l'image avec détection de visages",
-                    data=file,
+                    data=binary_data,
                     file_name="detected_faces.jpg",
                     mime="image/jpeg"
                 )
